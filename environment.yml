@@ -1,0 +1,22 @@
+name: course-env
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip:
+    - transformers
+    - datasets
+    - peft
+    - accelerate
+    - bitsandbytes
+    - trl
+    - safetensors
+    - lm-eval
+    - gradio
+    - flask
+    - pgvector
+    - sentence-transformers
+    - langchain
+    - psycopg2-binary
+    - pypdf
