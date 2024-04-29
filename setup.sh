@@ -63,24 +63,33 @@ if [ ! -d "$HOME/genai-bootcamp-curriculum" ]; then
 fi
 cd $HOME/genai-bootcamp-curriculum
 
-# Create Conda environment from environment.yml if it doesn't exist
-if ! conda info --envs | grep 'course-env'; then
+# Manage Conda environment: Create if not exists or update if it does
+env_name="course-env"
+if conda info --envs | grep "$env_name" > /dev/null; then
+    echo "Updating existing environment: $env_name"
+    conda env update -n $env_name -f environment.yml
+else
+    echo "Creating new environment: $env_name"
     conda env create -f environment.yml
 fi
 
-# Activate environment
-source $HOME/miniconda/bin/activate course-env
+
 
 # Download data from S3 to the local file system before starting Jupyter
 if [ -n "$COMPANY_S3" ]; then
     aws s3 cp s3://$COMPANY_S3 $HOME/genai-bootcamp-curriculum/data/call_notes --recursive
 fi
 
-# Install Jupyter Lab if not already installed
-if ! command -v jupyter-lab &> /dev/null
-then
-    conda install -y jupyterlab
-fi
+# # Install Jupyter Lab if not already installed
+# if ! command -v jupyter-lab &> /dev/null
+# then
+#     conda install -y jupyterlab
+# fi
+conda install -c conda-forge jupyterlab
+# Activate environment
+source $HOME/miniconda/bin/activate course-env
+conda install ipykernel
+python3 -m ipykernel install --user --name course-env --display-name "Python3.11 (course-env)"
 
 # Install additional Python packages with pip
 pip install packaging ninja
@@ -93,11 +102,11 @@ docker compose up -d
 mkdir -p $HOME/logs
 
 # Start Jupyter Lab in a detached tmux session and log output
-#tmux new-session -d -s jupyter_session "jupyter lab --ip=0.0.0.0 --no-browser 2>&1 | tee $HOME/logs/jupyter_lab.log"
-tmux new-session -d -s jupyter_session "source $HOME/miniconda/bin/activate course-env && jupyter lab --ip=0.0.0.0 --no-browser 2>&1 | tee $HOME/logs/jupyter_lab.log"
+tmux new-session -d -s jupyter_session "jupyter lab --ip=0.0.0.0 --no-browser 2>&1 | tee $HOME/logs/jupyter_lab.log"
+#tmux new-session -d -s jupyter_session "source $HOME/miniconda/bin/activate course-env && jupyter lab --ip=0.0.0.0 --no-browser 2>&1 | tee $HOME/logs/jupyter_lab.log"
 
 # Give Jupyter time to start and log the token
-sleep 10
+sleep 5
 
 # Use Jupyter's list command to capture the running server's info
 # Ensuring you execute the command in the same environment as Jupyter

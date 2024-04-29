@@ -5,6 +5,7 @@ channels:
 dependencies:
   - python=3.11
   - pip:
+    - torch
     - transformers
     - datasets
     - peft
@@ -22,4 +23,5 @@ dependencies:
     - psycopg2-binary
     - pypdf
     - sqlalchemy
+    - numpy
     
