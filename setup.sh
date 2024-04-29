@@ -85,7 +85,7 @@ fi
 # then
 #     conda install -y jupyterlab
 # fi
-conda install -c conda-forge jupyterlab
+conda install -y jupyterlab
 # Activate environment
 source $HOME/miniconda/bin/activate course-env
 conda install ipykernel

@@ -1,6 +1,6 @@
 https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 company.yml
-data/
+data/*
 **/mistral-7b*
 **/all-MiniLM-L6-v2
 **/__pycache__
