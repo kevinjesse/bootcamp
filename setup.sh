@@ -93,7 +93,8 @@ docker compose up -d
 mkdir -p $HOME/logs
 
 # Start Jupyter Lab in a detached tmux session and log output
-tmux new-session -d -s jupyter_session "jupyter lab --ip=0.0.0.0 --no-browser 2>&1 | tee $HOME/logs/jupyter_lab.log"
+#tmux new-session -d -s jupyter_session "jupyter lab --ip=0.0.0.0 --no-browser 2>&1 | tee $HOME/logs/jupyter_lab.log"
+tmux new-session -d -s jupyter_session "source $HOME/miniconda/bin/activate course-env && jupyter lab --ip=0.0.0.0 --no-browser 2>&1 | tee $HOME/logs/jupyter_lab.log"
 
 # Give Jupyter time to start and log the token
 sleep 10
