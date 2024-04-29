@@ -15,3 +15,9 @@ This repo contains a few brief examples of working with Generative AI Models.
     This folder contains examples of working with Large Language Models, including RAG and Fine-tuning which will be useful in your Capston experience.
 
 To use these projects, make sure to read the instructions.
+
+# Setup
+./setup
+
+# for running .py scripts outside of jupyter, make sure to activate the virtual env with conda.
+source $HOME/miniconda/bin/activate course-env

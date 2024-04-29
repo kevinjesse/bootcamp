@@ -18,5 +18,8 @@ dependencies:
     - pgvector
     - sentence-transformers
     - langchain
+    - langchain-core   
     - psycopg2-binary
     - pypdf
+    - sqlalchemy
+    

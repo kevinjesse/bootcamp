@@ -78,9 +78,9 @@ args = parser.parse_args()
 # )
 
 #### Not required for Capstone, but starter code for implementing thumbs up/down feedback ####
-#def process_like(
+# def process_like(
 #    like: gr.LikeData, chat: List[List[str]], prompt_format: str, context_state: str
-#) -> None:
+# ) -> None:
 #    """Process `like` event
 #
 #    Args:
@@ -101,6 +101,7 @@ args = parser.parse_args()
 #
 #    gr.Info("Thanks for submitting your feedback...")
 ################################################################################################
+
 
 def log_metrics() -> None:
     """Log any metrics"""

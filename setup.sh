@@ -3,10 +3,9 @@
 # Load company-specific information from company.yml if it exists
 COMPANY_FILE="company.yml"
 
-# Check if the company.yml file exists
+# Use Python to read the YAML file and set variables
 if [ -f "$COMPANY_FILE" ]; then
-    # Read the YAML file and set variables
-    eval "$(yaml2json < "$COMPANY_FILE" | jq -r 'to_entries|map("export \(.key|ascii_upcase)='\''\(.value)'\''")|.[]')"
+    python3 -c "import yaml, os; [os.environ.update({k.upper(): v for k, v in yaml.safe_load(open('$COMPANY_FILE').read()).items()})]"
 else
     echo "Warning: company.yml not found. Skipping company-specific configurations."
 fi
@@ -74,7 +73,7 @@ source $HOME/miniconda/bin/activate course-env
 
 # Download data from S3 to the local file system before starting Jupyter
 if [ -n "$COMPANY_S3" ]; then
-    aws s3 cp s3://$COMPANY_S3 $HOME/genai-bootcamp-curriculum/call_notes --recursive
+    aws s3 cp s3://$COMPANY_S3 $HOME/genai-bootcamp-curriculum/data/call_notes --recursive
 fi
 
 # Install Jupyter Lab if not already installed
@@ -87,33 +86,41 @@ fi
 pip install packaging ninja
 pip install flash-attn --no-build-isolation
 
-# Start Jupyter Lab in a detached tmux session
-tmux new-session -d -s jupyter_session 'jupyter lab --ip=0.0.0.0 --no-browser'
+# Start PGVector DB
+docker compose up -d
 
-# Wait for Jupyter to start
-sleep 5
+# Ensure log directory exists
+mkdir -p $HOME/logs
 
-# Extract Jupyter security token
-jupyter_token=$(grep -Po 'token=\K[^&]+' $HOME/.jupyter/jupyter_server_config.json)
+# Start Jupyter Lab in a detached tmux session and log output
+tmux new-session -d -s jupyter_session "jupyter lab --ip=0.0.0.0 --no-browser 2>&1 | tee $HOME/logs/jupyter_lab.log"
 
-# If the public hostname is available, set up SSH port forwarding
-if [ "$public_hostname" != "not-on-ec2" ]; then
-    # SSH port forwarding to localhost:8888
-    if [ -n "$COMPANY_PROXY" ]; then
-        if [ -n "$COMPANY_PROXY" ]; then
-            ssh -o "ProxyCommand=nc -X connect -x $COMPANY_PROXY %h %p" -nNT -L 8888:localhost:8888 -i ~/.ssh/bootcamp.pem ubuntu@$public_hostname
-        else
-            ssh -nNT -L 8888:localhost:8888 -i ~/.ssh/bootcamp.pem ubuntu@$public_hostname
-        fi
-    else
-        ssh -nNT -L 8888:localhost:8888 -i ~/.ssh/bootcamp.pem ubuntu@$public_hostname
-    fi
-else
-    echo "Not on EC2. SSH port forwarding not configured."
+# Give Jupyter time to start and log the token
+sleep 10
+
+# Use Jupyter's list command to capture the running server's info
+# Ensuring you execute the command in the same environment as Jupyter
+tmux send-keys -t jupyter_session "jupyter lab list" Enter
+
+# Wait a little for the command to execute
+sleep 2
+
+# Capture the output and extract the token
+jupyter_token=$(grep -oP 'token=\K[\w]+' $HOME/logs/jupyter_lab.log)
+
+# Check if the token was successfully captured
+if [ -z "$jupyter_token" ]; then
+    echo "Failed to capture Jupyter Lab token."
+    exit 1
 fi
 
-# Dump the address of Jupyter instance with token
+#ssh
+echo "SSH forwarding setup..."
+echo "Jupyter Lab is accessible at: http://$public_hostname:8888/?token=$jupyter_token"
+
+# Rest of your SSH forwarding setup...
+echo "if using SSH forwarding, you can access your instance here:"
 echo "Jupyter Lab is accessible at: http://localhost:8888/?token=$jupyter_token"
 
-# Disconnect from the tmux session
-tmux detach -s jupyter_session
+# Rest of your SSH forwarding setup...
+

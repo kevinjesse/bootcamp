@@ -22,17 +22,20 @@ CONNECTION_STRING = PGVector.connection_string_from_db_params(
 )
 
 
-def format_docs(docs: List[str]) -> str:
-    return "\n\n".join(doc.page_content for doc in docs)
+def format_docs(docs: List[Dict]) -> str:
+    """Format the documents by joining page content separated by two newlines."""
+    return "\n\n".join(
+        doc.page_content for doc in docs
+    )  # Ensure proper key access in dictionaries
 
 
 def build_rag_pipeline(
     model_id: str = "mistralai/Mistral-7B-Instruct-v0.1", k: int = 1
 ):
-    model_path_or_id = model_id
-    tokenizer = AutoTokenizer.from_pretrained(model_path_or_id)
+    """Builds a Retrieve-and-Generate pipeline."""
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
     model = AutoModelForCausalLM.from_pretrained(
-        model_path_or_id,
+        model_id,
         low_cpu_mem_usage=True,
         torch_dtype=torch.float16,
         bnb_4bit_compute_dtype=torch.float16,
@@ -88,6 +91,7 @@ def build_rag_pipeline(
         ],
         "answer": rag_chain_from_docs,
     }
+
     return rag_chain_with_source
 
 
@@ -99,19 +103,20 @@ if __name__ == "__main__":
         "--generation_llm",
         type=str,
         default="mistralai/Mistral-7B-Instruct-v0.1",
-        help="pretrained model id to use for generation",
+        help="Pretrained model ID to use for generation.",
     )
-    parser.add_argument("--query", type=str, required=True, help="query")
+    parser.add_argument("--query", type=str, required=True, help="Query to process.")
     parser.add_argument(
         "--top_k",
         type=int,
-        default=1,
-        help="how many documents to stuff in the rag prompt",
+        default=10,
+        help="Number of documents to retrieve for the RAG prompt.",
     )
 
     args = parser.parse_args()
 
-    # query it
-    rag_chain = build_rag_pipeline(model_id=args.generation_llm, k=args.k)
+    # Setup the RAG pipeline
+    rag_chain = build_rag_pipeline(model_id=args.generation_llm, k=args.top_k)
+    # Correct input format to invoke function
     res = rag_chain.invoke(args.query)
     print(res["answer"])
