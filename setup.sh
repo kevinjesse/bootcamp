@@ -1,136 +1,141 @@
 #!/bin/bash
 
 # Load company-specific information from company.yml if it exists
-COMPANY_FILE="company.yml"
+function setup_env_variables {
+    COMPANY_FILE="company.yml"
+    if [ -f "$COMPANY_FILE" ]; then
+        python3 -c "import yaml, os; [os.environ.update({k.upper(): v for k, v in yaml.safe_load(open('$COMPANY_FILE').read()).items()})]"
+    else
+        echo "Warning: company.yml not found. Skipping company-specific configurations."
+    fi
+}
 
-# Use Python to read the YAML file and set variables
-if [ -f "$COMPANY_FILE" ]; then
-    python3 -c "import yaml, os; [os.environ.update({k.upper(): v for k, v in yaml.safe_load(open('$COMPANY_FILE').read()).items()})]"
-else
-    echo "Warning: company.yml not found. Skipping company-specific configurations."
-fi
-
-# Update package lists
-sudo apt-get update
-
-# Check if the public hostname is available
-public_hostname=$(curl -s --max-time 1 http://169.254.169.254/latest/meta-data/public-hostname)
-
-# If the public hostname is not available, set a placeholder
-if [ -z "$public_hostname" ]; then
-    public_hostname="not-on-ec2"
-fi
-
-# Install AWS CLI if not already installed
-if ! command -v aws &> /dev/null
-then
-    # Download the AWS CLI
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-    # Unzip the installer
-    unzip awscliv2.zip
+# Update package lists and install essential packages
+function update_system {
+    sudo apt-get update
     # Install AWS CLI
-    sudo ./aws/install
-    # Cleanup AWS CLI installer files
-    rm -rf awscliv2.zip ./aws
-fi
+    if ! command -v aws &> /dev/null; then
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        sudo ./aws/install
+        rm -rf awscliv2.zip ./aws
+    fi
+    # Install Git if not installed
+    if ! command -v git &> /dev/null; then
+        sudo apt-get install -y git
+    fi
+}
 
-# Install Miniconda if not already installed
-if [ ! -d "$HOME/miniconda" ]; then
-    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/Miniconda3-latest-Linux-x86_64.sh
-    bash $HOME/Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda
-    rm $HOME/Miniconda3-latest-Linux-x86_64.sh
-fi
+# Install and configure Python environment
+function install_python_tools {
+    # Install Miniconda
+    if [ ! -d "$HOME/miniconda" ]; then
+        wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/Miniconda3-latest-Linux-x86_64.sh
+        bash $HOME/Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda
+        rm $HOME/Miniconda3-latest-Linux-x86_64.sh
+    fi
+    export PATH="$HOME/miniconda/bin:$PATH"
+    if ! command -v conda &> /dev/null; then
+        echo "Conda installation failed or Conda executable not found in PATH."
+        exit 1
+    fi
 
-# Set PATH directly in the script
-export PATH="$HOME/miniconda/bin:$PATH"
+    # Install JupyterLab
+    source $HOME/miniconda/bin/activate course-env
+    conda install ipykernel
+    python3 -m ipykernel install --user --name course-env --display-name "Python3.11 (course-env)"
 
-# Verify Conda is in the PATH
-if ! command -v conda &> /dev/null
-then
-    echo "Conda installation failed or Conda executable not found in PATH."
-    exit 1
-fi
+    # Install additional Python packages that require specific cli args with pip
+    pip install packaging ninja
+    pip install flash-attn --no-build-isolation
 
-# Check if git is installed, install if not
-if ! command -v git &> /dev/null
-then
-    sudo apt-get install -y git
-fi
+}
 
-# Clone the course repository if it does not already exist
-if [ ! -d "$HOME/genai-bootcamp-curriculum" ]; then
-    git clone https://github.com/kevinjesse/genai-bootcamp-curriculum.git $HOME/genai-bootcamp-curriculum
-fi
-cd $HOME/genai-bootcamp-curriculum
+# Clone and set up the course repository
+function setup_repository {
+    if [ ! -d "$HOME/genai-bootcamp-curriculum" ]; then
+        git clone https://github.com/kevinjesse/genai-bootcamp-curriculum.git $HOME/genai-bootcamp-curriculum
+    fi
+    cd $HOME/genai-bootcamp-curriculum
+    local env_name="course-env"
+    if conda info --envs | grep "$env_name" > /dev/null; then
+        conda env update -n $env_name -f environment.yml
+    else
+        conda env create -f environment.yml
+    fi
+}
 
-# Manage Conda environment: Create if not exists or update if it does
-env_name="course-env"
-if conda info --envs | grep "$env_name" > /dev/null; then
-    echo "Updating existing environment: $env_name"
-    conda env update -n $env_name -f environment.yml
-else
-    echo "Creating new environment: $env_name"
-    conda env create -f environment.yml
-fi
+# Download data from S3 based on TASK
+function download_data {
+    if [ -n "$COMPANY_S3" ] && [ -n "$TASK" ]; then
+        case "$TASK" in
+            "MCN")
+                aws s3 cp s3://$COMPANY_S3 $HOME/genai-bootcamp-curriculum/data/mcn --recursive
+                ;;
+            # Additional cases can be added here
+        esac
+    fi
+}
+
+# Start Jupyter Lab and other services
+function start_jupyter {
+   # Start Jupyter Lab in a detached tmux session
+    tmux new-session -d -s jupyter_session "jupyter lab --ip=0.0.0.0 --no-browser --NotebookApp.token='' --log-level=INFO"
+
+    # Allow some time for Jupyter Lab to start
+    sleep 10  # Adjust sleep as needed based on your system's performance
+
+    # Send the 'jupyter lab list' command to the session to get the URL with the token
+    tmux send-keys -t jupyter_session "jupyter lab list" C-m
+
+    # Wait a moment for the output to stabilize
+    sleep 2
+
+    # Capture the output directly from tmux buffer and extract the token
+    jupyter_url=$(tmux capture-pane -p -t jupyter_session | grep -oP 'http://127.0.0.1:8888/lab\?token=\K[\w]+')
+
+    # Check if the token was successfully captured
+    if [ -z "$jupyter_url" ]; then
+        echo "Failed to capture Jupyter Lab token."
+        exit 1
+    else
+        # Get public hostname
+        public_hostname=$(curl -s --max-time 1 http://169.254.169.254/latest/meta-data/public-hostname)
+        if [ -z "$public_hostname" ]; then
+            public_hostname="not-on-ec2"
+        fi
+        
+        # Construct the full URL
+        login_info="Jupyter Lab is accessible at: http://localhost:8888/lab?token=$jupyter_url"
+        echo "$login_info"
+        
+        # Save the login info to a file named after the public hostname
+        filename="$HOME/${public_hostname}.txt"
+        echo "$login_info" > $filename
+        
+        # Upload the file to S3
+        if [ -n "$COMPANY_S3" ]; then
+            aws s3 cp $filename s3://$COMPANY_S3/${public_hostname}.txt
+        fi
+    fi
 
 
+}
 
-# Download data from S3 to the local file system before starting Jupyter
-if [ -n "$COMPANY_S3" ]; then
-    aws s3 cp s3://$COMPANY_S3 $HOME/genai-bootcamp-curriculum/data/call_notes --recursive
-fi
+function start_docker {
+    # Start Docker Compose services
+    docker compose up -d
+}
 
-# # Install Jupyter Lab if not already installed
-# if ! command -v jupyter-lab &> /dev/null
-# then
-#     conda install -y jupyterlab
-# fi
-conda install -y jupyterlab
-# Activate environment
-source $HOME/miniconda/bin/activate course-env
-conda install ipykernel
-python3 -m ipykernel install --user --name course-env --display-name "Python3.11 (course-env)"
+# Main execution
+function main {
+    setup_env_variables
+    update_system
+    install_python_tools
+    setup_repository
+    download_data
+    start_jupyter
+    start_docker
+}
 
-# Install additional Python packages with pip
-pip install packaging ninja
-pip install flash-attn --no-build-isolation
-
-# Start PGVector DB
-docker compose up -d
-
-# Ensure log directory exists
-mkdir -p $HOME/logs
-
-# Start Jupyter Lab in a detached tmux session and log output
-tmux new-session -d -s jupyter_session "jupyter lab --ip=0.0.0.0 --no-browser 2>&1 | tee $HOME/logs/jupyter_lab.log"
-#tmux new-session -d -s jupyter_session "source $HOME/miniconda/bin/activate course-env && jupyter lab --ip=0.0.0.0 --no-browser 2>&1 | tee $HOME/logs/jupyter_lab.log"
-
-# Give Jupyter time to start and log the token
-sleep 5
-
-# Use Jupyter's list command to capture the running server's info
-# Ensuring you execute the command in the same environment as Jupyter
-tmux send-keys -t jupyter_session "jupyter lab list" Enter
-
-# Wait a little for the command to execute
-sleep 2
-
-# Capture the output and extract the token
-jupyter_token=$(grep -oP 'token=\K[\w]+' $HOME/logs/jupyter_lab.log)
-
-# Check if the token was successfully captured
-if [ -z "$jupyter_token" ]; then
-    echo "Failed to capture Jupyter Lab token."
-    exit 1
-fi
-
-#ssh
-echo "SSH forwarding setup..."
-echo "Jupyter Lab is accessible at: http://$public_hostname:8888/?token=$jupyter_token"
-
-# Rest of your SSH forwarding setup...
-echo "if using SSH forwarding, you can access your instance here:"
-echo "Jupyter Lab is accessible at: http://localhost:8888/?token=$jupyter_token"
-
-# Rest of your SSH forwarding setup...
-
+main
