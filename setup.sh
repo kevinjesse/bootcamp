@@ -44,7 +44,6 @@ function install_python_tools {
     source $HOME/miniconda/bin/activate course-env
     conda install ipykernel
     python3 -m ipykernel install --user --name course-env --display-name "Python3.11 (course-env)"
-
     # Install additional Python packages that require specific cli args with pip
     pip install packaging ninja
     pip install flash-attn --no-build-isolation
@@ -77,25 +76,54 @@ function download_data {
     fi
 }
 
+
+function update_jupyter_lab {
+    # Define the path to the Jupyter configuration file
+
+    CONFIG_FILE="$HOME/.jupyter/jupyter_lab_config.py"
+
+    # Check if the configuration file exists
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo "Configuration file does not exist, generating one..."
+        jupyter lab --generate-config
+    fi
+
+    # Check if the kernel setting already exists in the configuration file
+    grep "c.MultiKernelManager.default_kernel_name" $CONFIG_FILE > /dev/null
+
+    if [ $? -eq 0 ]; then
+        # Configuration line exists, replace it
+        sed -i '/c.MultiKernelManager.default_kernel_name/c\c.MultiKernelManager.default_kernel_name = "course-env"' $CONFIG_FILE
+        echo "Updated existing kernel setting."
+    else
+        # Configuration line does not exist, add it
+        echo "c.MultiKernelManager.default_kernel_name = 'course-env'" >> $CONFIG_FILE
+        echo "Added new kernel setting."
+    fi
+    jupyter lab stop
+
+    echo "Jupyter configuration updated successfully."
+
+}
+
 # Start Jupyter Lab and other services
 function start_jupyter {
-   # Start Jupyter Lab in a detached tmux session
-    tmux new-session -d -s jupyter_session "jupyter lab --ip=0.0.0.0 --no-browser --NotebookApp.token='' --log-level=INFO"
-
-    # Allow some time for Jupyter Lab to start
-    sleep 10  # Adjust sleep as needed based on your system's performance
-
-    # Send the 'jupyter lab list' command to the session to get the URL with the token
-    tmux send-keys -t jupyter_session "jupyter lab list" C-m
+    update_jupyter_config
+    tmux new-session -d -s jupyter_session "jupyter lab --ip=0.0.0.0 --no-browser --log-level=INFO"
+    
 
     # Wait a moment for the output to stabilize
     sleep 2
 
-    # Capture the output directly from tmux buffer and extract the token
-    jupyter_url=$(tmux capture-pane -p -t jupyter_session | grep -oP 'http://127.0.0.1:8888/lab\?token=\K[\w]+')
+    # Capture the output directly from tmux buffer
+    jupyter_log=$(tmux capture-pane -p -t jupyter_session)
+
+    # Use regex to extract the token and port from the captured log
+    token=$(echo "$jupyter_log" | grep -oP 'http://127.0.0.1:\d+/lab\?token=\K[\w]+')
+    port=$(echo "$jupyter_log" | grep -oP 'http://127.0.0.1:\K\d+')
 
     # Check if the token was successfully captured
-    if [ -z "$jupyter_url" ]; then
+    if [ -z "$token" ]; then
         echo "Failed to capture Jupyter Lab token."
         exit 1
     else
@@ -105,8 +133,8 @@ function start_jupyter {
             public_hostname="not-on-ec2"
         fi
         
-        # Construct the full URL
-        login_info="Jupyter Lab is accessible at: http://localhost:8888/lab?token=$jupyter_url"
+        # Construct the full URL using the dynamically captured port
+        login_info="Jupyter Lab is accessible at: http://localhost:$port/lab?token=$token"
         echo "$login_info"
         
         # Save the login info to a file named after the public hostname
@@ -118,8 +146,6 @@ function start_jupyter {
             aws s3 cp $filename s3://$COMPANY_S3/${public_hostname}.txt
         fi
     fi
-
-
 }
 
 function start_docker {
