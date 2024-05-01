@@ -80,23 +80,23 @@ model = get_peft_model(model, peft_config)
 # Setup training arguments
 args = TrainingArguments(
     output_dir="./mistral-7b-int4-dolly",
-    num_train_epochs=1,
-    per_device_train_batch_size=7,
-    gradient_accumulation_steps=4,
+    num_train_epochs=1,  # number of training epochs
+    per_device_train_batch_size=7,  # batch size per device
+    gradient_accumulation_steps=4,  # effective batch size is 7 * 4 = 28
     gradient_checkpointing=True,
-    gradient_checkpointing_kwargs={"use_reentrant": True},
+    gradient_checkpointing_kwargs={'use_reentrant': True},
     optim="paged_adamw_32bit",
-    logging_steps=1,
-    save_strategy="steps",
-    save_total_limit=2,
-    save_steps=2,
+    logging_steps=1,  # log the training error every step
+    save_strategy="epoch",  # save checkpoints at the end of each epoch
+    save_total_limit=1,  # retain only the most recent checkpoint
+    ignore_data_skip=True,
     learning_rate=1e-5,
     bf16=True,
     tf32=True,
     max_grad_norm=1.0,
     warmup_steps=100,
     lr_scheduler_type="constant",
-    disable_tqdm=True,
+    disable_tqdm=True
 )
 
 # Configure and run the trainer

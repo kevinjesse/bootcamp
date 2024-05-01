@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# Do not modify the script below. It is used to set up the environment for the course.
 # Default settings
 use_locked_env="yes"  # Default to use the locked environment
 
