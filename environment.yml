@@ -1,9 +1,16 @@
 name: course-env
 channels:
-  - defaults
   - conda-forge
+  - defaults
 dependencies:
-  - python=3.11
+  - python=3.12
+  - numpy
+  - sqlalchemy
+  - psycopg2-binary
+  - flask
+  - ipykernel
+  - jupyterlab
+  - pgvector  # Using conda-forge's channel ensures you get the right package
   - pip:
     - torch
     - transformers
@@ -15,13 +22,9 @@ dependencies:
     - safetensors
     - lm-eval
     - gradio
-    - flask
-    - pgvector
     - sentence-transformers
     - langchain
-    - langchain-core   
-    - psycopg2-binary
+    - langchain-core
     - pypdf
-    - sqlalchemy
-    - numpy
-    
+    - packaging
+    - ninja
