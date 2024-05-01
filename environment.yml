@@ -10,7 +10,8 @@ dependencies:
   - flask
   - ipykernel
   - jupyterlab
-  - pgvector  # Using conda-forge's channel ensures you get the right package
+  - ipywidgets
+  - pgvector  
   - pip:
     - torch
     - transformers
