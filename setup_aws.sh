@@ -63,9 +63,9 @@ function install_python_tools {
 
 # Clone and set up the course repository
 function setup_repository {
-    REPO_DIR="$HOME/genai-bootcamp-curriculum"
+    REPO_DIR="$HOME/bootcamp"
     if [ ! -d "$REPO_DIR" ]; then
-        git clone https://github.com/kevinjesse/genai-bootcamp-curriculum.git $REPO_DIR
+        git clone https://github.com/kevinjesse/bootcamp.git $REPO_DIR
     fi
     cd $REPO_DIR
     local env_file="environment.yml"
@@ -83,7 +83,7 @@ function setup_repository {
 # Download data from S3 based on TASK
 function download_data {
     if [ -n "$COMPANY_S3" ] && [ -n "$TASK" ]; then
-        local target_path="$HOME/genai-bootcamp-curriculum/data/${TASK,,}"
+        local target_path="$HOME/bootcamp/data/${TASK,,}"
         mkdir -p "$target_path"
         aws s3 cp "s3://$COMPANY_S3/$TASK" "$target_path" --recursive
     fi
