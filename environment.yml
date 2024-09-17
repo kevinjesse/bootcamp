@@ -3,13 +3,12 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.12
+  - python=3.11
   - numpy
   - sqlalchemy
   - psycopg2-binary
   - flask
   - ipykernel
-  - jupyterlab
   - ipywidgets
   - pgvector  
   - pip:
@@ -30,3 +29,5 @@ dependencies:
     - packaging
     - ninja
     - huggingface_hub
+    - jupyterlab
+    - flash_attn-2.6.3-cp311-cp311-linux_x86_64.whl
