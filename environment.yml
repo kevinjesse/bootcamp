@@ -30,4 +30,6 @@ dependencies:
     - ninja
     - huggingface_hub
     - jupyterlab
+    - langchain-community
+    - pgvector
     - flash_attn-2.6.3-cp311-cp311-linux_x86_64.whl
