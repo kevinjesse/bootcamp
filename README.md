@@ -13,7 +13,7 @@ This repository is designed as a comprehensive suite for a machine learning boot
 ## Daily Exercises
 This section provides practical experience with different machine learning tasks and tools through various exercises.
 
-### Day 2
+### Day 1
 - **Transformers Exercise**: Understand and apply model encodings for prediction tasks.
 
 ### Day 2
