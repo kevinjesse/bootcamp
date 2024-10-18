@@ -42,9 +42,6 @@ Designed to integrate skills from the course into substantial, real-world data s
 ### 2.4 Inference Methods
 - **Notebooks and Scripts**: Resources on various inference methods, including practical applications.
 
-### 2.5 Solution Directory
-- **Purpose**: Completed examples and solutions as references for learners.
-
 ## Supporting Files and Directories
 - **`data/`**: Datasets for multiple projects.
 - **`docker-compose.yml`**: Setup for required Docker containers.
