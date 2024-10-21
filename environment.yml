@@ -24,6 +24,7 @@ dependencies:
     - gradio
     - sentence-transformers
     - langchain
+    - tensorboard
     - langchain-core
     - pypdf
     - packaging
