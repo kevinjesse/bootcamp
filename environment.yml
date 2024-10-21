@@ -29,6 +29,7 @@ dependencies:
     - langchain-core
     - pypdf
     - packaging
+    - langchain_huggingface
     - ninja
     - huggingface_hub
     - jupyterlab
